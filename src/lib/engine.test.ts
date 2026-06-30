@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyze, accountHealth } from "./engine";
-import { computeMetrics, safeDiv, median, signalConfidence, spendConfidence, summarizeByChannel, effectiveRevenue, channelMedianCtr } from "./metrics";
+import { computeMetrics, safeDiv, median, signalConfidence, spendConfidence, summarizeByChannel, effectiveRevenue, channelMedianCtr, sustainedFatigue } from "./metrics";
 import { parseCsv, sanitizeAdRows } from "./csv";
 import type { AdRow } from "./types";
 
@@ -360,6 +360,91 @@ describe("trend creative fatigue (period-over-period)", () => {
       row({ id: "noprior", spend: 1500, revenue: 1800, conversions: 45, clicks: 9000, impressions: 600000 }),
     ]);
     expect(recommendations[0].action).toBe("KEEP");
+  });
+});
+
+describe("sustainedFatigue (multi-period CTR trend)", () => {
+  it("flags a sustained decline toward the recent peak across 3+ periods", () => {
+    const t = sustainedFatigue(0.014, [0.03, 0.026, 0.021], 0.25);
+    expect(t.declining).toBe(true);
+    expect(t.periods).toBe(4);
+    expect(t.consecutiveDrops).toBe(3);
+    expect(t.peak).toBe(0.03);
+    expect(t.dropPct).toBe(53.3);
+  });
+
+  it("stays silent with fewer than two prior points", () => {
+    expect(sustainedFatigue(0.014, [0.03], 0.25).declining).toBe(false);
+    expect(sustainedFatigue(0.014, undefined, 0.25).declining).toBe(false);
+    expect(sustainedFatigue(0.014, [], 0.25).periods).toBe(0);
+  });
+
+  it("does NOT flag a single-period dip after a rise (needs ≥2 consecutive drops)", () => {
+    // series 0.02 → 0.03 → 0.014: only the last step is a drop.
+    const t = sustainedFatigue(0.014, [0.02, 0.03], 0.25);
+    expect(t.consecutiveDrops).toBe(1);
+    expect(t.declining).toBe(false);
+  });
+
+  it("does NOT flag a shallow sustained drift below the decline threshold", () => {
+    // 0.030 → 0.029 → 0.028: consecutive but only ~7% off peak (< 25% trigger).
+    const t = sustainedFatigue(0.028, [0.03, 0.029], 0.25);
+    expect(t.consecutiveDrops).toBe(2);
+    expect(t.declining).toBe(false);
+  });
+});
+
+describe("multi-period creative fatigue (engine)", () => {
+  it("fires REFRESH on a sustained decline even with no single prior cliff and above channel median", () => {
+    const { recommendations } = analyze([
+      // Lone entity → cross-sectional rule cannot fire; no priorCtr → single-period
+      // rule cannot fire; only the multi-period series signal can.
+      row({ id: "mp", spend: 1500, revenue: 1800, conversions: 45, clicks: 7000, impressions: 500000, ctrHistory: [0.03, 0.026, 0.021] }),
+    ]);
+    const rec = recommendations[0];
+    expect(rec.action).toBe("REFRESH_CREATIVE");
+    // peak 0.03 / ctr 0.014 → uplift capped 0.5 → profit 300 × 0.5 = 150.
+    expect(rec.projectedImpactUsd).toBe(150);
+    expect(rec.rationale).toMatch(/periods running/i);
+  });
+
+  it("lifts confidence in proportion to the losing run when the series leads", () => {
+    const base = signalConfidence(400, 6, 250, 5); // 0.34
+    const { recommendations } = analyze([
+      row({ id: "mp2", spend: 400, revenue: 480, conversions: 6, clicks: 700, impressions: 50000, ctrHistory: [0.03, 0.026, 0.021] }),
+    ]);
+    const rec = recommendations[0];
+    expect(rec.action).toBe("REFRESH_CREATIVE");
+    // base + 0.05 × 3 consecutive drops.
+    expect(rec.confidence).toBe(Math.round((base + 0.15) * 100) / 100);
+    expect(rec.confidence).toBeGreaterThan(base);
+  });
+
+  it("is backward compatible: a one-element history is ignored ⇒ KEEP", () => {
+    const { recommendations } = analyze([
+      row({ id: "one", spend: 1500, revenue: 1800, conversions: 45, clicks: 7000, impressions: 500000, ctrHistory: [0.03] }),
+    ]);
+    expect(recommendations[0].action).toBe("KEEP");
+  });
+});
+
+describe("csv ctr_history ingest", () => {
+  it("parses a pipe-delimited ctr_history cell into a numeric series", () => {
+    const csv = "campaign,platform,cost,ctr_history\nUGC,Taboola,1500,0.03|0.026|0.021";
+    const [r] = parseCsv(csv);
+    expect(r.ctrHistory).toEqual([0.03, 0.026, 0.021]);
+  });
+
+  it("leaves ctrHistory undefined when fewer than two valid points", () => {
+    expect(parseCsv("campaign,platform,cost\nX,Meta,500")[0].ctrHistory).toBeUndefined();
+    expect(parseCsv("campaign,platform,cost,ctr_history\nY,Meta,500,0.03")[0].ctrHistory).toBeUndefined();
+  });
+
+  it("sanitizeAdRows keeps a valid array and drops a non-array or thin series", () => {
+    const [ok] = sanitizeAdRows([{ id: "a", ctrHistory: [0.03, "0.02", -1, 0.01] }]);
+    expect(ok.ctrHistory).toEqual([0.03, 0.02, 0.01]);
+    const [bad] = sanitizeAdRows([{ id: "b", ctrHistory: "0.03" }]);
+    expect(bad.ctrHistory).toBeUndefined();
   });
 });
 

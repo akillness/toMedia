@@ -118,6 +118,21 @@ export const SAMPLE_DATA: AdRow[] = [
     priorCtr: 0.024,
     date: "2026-06-01",
   },
+  // REFRESH_CREATIVE (multi-period): above the Taboola median and no single-period
+  // cliff, but CTR has decayed across four straight periods — sustained fatigue the
+  // period-over-period rule alone might wave through as noise.
+  {
+    id: "t-3",
+    name: "Taboola · Insurance — Native",
+    channel: "taboola",
+    spend: 1600,
+    revenue: 1920,
+    conversions: 48,
+    clicks: 7000,
+    impressions: 500000,
+    ctrHistory: [0.03, 0.026, 0.021],
+    date: "2026-06-01",
+  },
   // BUDGET LEAK: real spend, zero conversions — the most urgent PAUSE.
   {
     id: "g-2",
@@ -149,7 +164,7 @@ export const SAMPLE_DATA: AdRow[] = [
 /** CSV string of the sample dataset, used to demo the upload path. */
 export function sampleCsv(): string {
   const header =
-    "id,name,channel,spend,revenue,conversions,clicks,impressions,date,prior_ctr,ltv_per_conversion";
+    "id,name,channel,spend,revenue,conversions,clicks,impressions,date,prior_ctr,ltv_per_conversion,ctr_history";
   const lines = SAMPLE_DATA.map((r) =>
     [
       r.id,
@@ -163,6 +178,8 @@ export function sampleCsv(): string {
       r.date ?? "",
       r.priorCtr ?? "",
       r.ltvPerConversion ?? "",
+      // Pipe-delimited so the series rides inside one un-quoted CSV cell.
+      r.ctrHistory?.join("|") ?? "",
     ].join(","),
   );
   return [header, ...lines].join("\n");

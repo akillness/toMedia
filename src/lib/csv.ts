@@ -14,6 +14,7 @@ const FIELD_ALIASES: Record<keyof AdRow, string[]> = {
   date: ["date", "day", "reporting_date"],
   priorCtr: ["prior_ctr", "previous_ctr", "ctr_prev", "last_ctr"],
   ltvPerConversion: ["ltv", "ltv_per_conversion", "value_per_conversion", "payout_ltv"],
+  ctrHistory: ["ctr_history", "ctrhistory", "ctr_series", "prior_ctrs"],
 };
 
 function normalizeChannel(value: string): Channel {
@@ -43,6 +44,21 @@ function toOptionalRate(value: string | undefined): number | undefined {
   if (value == null || value.trim() === "") return undefined;
   const n = Number(value.trim());
   return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/**
+ * Parse an optional CTR series for multi-period fatigue. The cell holds prior
+ * periods oldest→newest, delimited by `|`, `;`, or whitespace (never a comma, so
+ * it survives CSV without quoting). Keeps only finite positive rates; returns
+ * undefined unless ≥2 remain, so the multi-period rule stays silent on thin data.
+ */
+function toOptionalSeries(value: string | undefined): number[] | undefined {
+  if (value == null || value.trim() === "") return undefined;
+  const parts = value
+    .split(/[|;\s]+/)
+    .map((p) => Number(p.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return parts.length >= 2 ? parts : undefined;
 }
 
 /**
@@ -140,6 +156,7 @@ export function parseCsv(text: string): AdRow[] {
       date: get("date") || undefined,
       priorCtr: toOptionalRate(get("priorCtr")),
       ltvPerConversion: toOptionalRate(get("ltvPerConversion")),
+      ctrHistory: toOptionalSeries(get("ctrHistory")),
     });
   }
   return rows;
@@ -155,6 +172,15 @@ function nonNeg(value: unknown): number {
 function optRate(value: unknown): number | undefined {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** Coerce an untrusted value into a CTR series (≥2 positive rates), or undefined. */
+function optSeries(value: unknown): number[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const clean = value
+    .map((v) => (typeof v === "number" ? v : Number(v)))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return clean.length >= 2 ? clean : undefined;
 }
 
 /**
@@ -179,6 +205,7 @@ export function sanitizeAdRows(input: unknown): AdRow[] {
       date: typeof r.date === "string" ? r.date : undefined,
       priorCtr: optRate(r.priorCtr),
       ltvPerConversion: optRate(r.ltvPerConversion),
+      ctrHistory: optSeries(r.ctrHistory),
     });
   });
   return rows;

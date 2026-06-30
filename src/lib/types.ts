@@ -17,6 +17,12 @@ export interface AdRow {
   /** This entity's CTR in the prior reporting period, for trend-fatigue detection (optional). */
   priorCtr?: number;
   /**
+   * This entity's CTR across consecutive prior reporting periods, oldest→newest
+   * (excluding the current period). Lets the engine distinguish a sustained
+   * multi-period decline (true creative fatigue) from a single-period blip.
+   */
+  ctrHistory?: number[];
+  /**
    * Known first-party lifetime value per conversion (optional). When present,
    * the engine values revenue as `conversions × ltvPerConversion` instead of the
    * immediately-attributed `revenue`, so profit decisions reflect downstream value.

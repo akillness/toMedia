@@ -66,6 +66,64 @@ export function spendConfidence(spend: number, minSpend: number): number {
   return round(Math.min(1, safeDiv(spend, minSpend * 4)), 2);
 }
 
+/** Result of a multi-period creative-fatigue assessment. */
+export interface FatigueTrend {
+  /**
+   * A sustained decline: ≥2 consecutive non-increasing periods ending now AND the
+   * current CTR is at least `declineRatio` below the recent peak. Distinguishes
+   * genuine fatigue from a one-period dip the single-period rule would over-fire on.
+   */
+  declining: boolean;
+  /** Total periods observed (prior history + current). */
+  periods: number;
+  /** Consecutive non-increasing steps ending at the current period. */
+  consecutiveDrops: number;
+  /** The entity's best CTR across the prior window — the recovery target. */
+  peak: number;
+  /** Percent decline from that peak to the current period. */
+  dropPct: number;
+}
+
+/**
+ * Assess multi-period creative fatigue from a CTR series. Pure, no side effects.
+ *
+ * `history` is the entity's CTR in consecutive prior periods (oldest→newest,
+ * excluding the current period). Needs ≥2 valid prior points (so a 3+ period
+ * series) to speak; otherwise it stays silent and the single-period signal stands.
+ * Fatigue is measured against the recent *peak*, not the first point, so the
+ * recovery target is robust to where in the window the best period landed.
+ */
+export function sustainedFatigue(
+  currentCtr: number,
+  history: number[] | undefined,
+  declineRatio: number,
+): FatigueTrend {
+  const none: FatigueTrend = {
+    declining: false,
+    periods: 0,
+    consecutiveDrops: 0,
+    peak: 0,
+    dropPct: 0,
+  };
+  const clean = (history ?? []).filter((c) => Number.isFinite(c) && c > 0);
+  if (clean.length < 2 || !(currentCtr > 0)) return none;
+
+  const series = [...clean, currentCtr];
+  const peak = Math.max(...clean);
+  let consecutiveDrops = 0;
+  for (let i = series.length - 1; i > 0; i--) {
+    if (series[i] <= series[i - 1]) consecutiveDrops++;
+    else break;
+  }
+  return {
+    declining: consecutiveDrops >= 2 && currentCtr <= peak * (1 - declineRatio),
+    periods: series.length,
+    consecutiveDrops,
+    peak: round(peak, 4),
+    dropPct: round((1 - currentCtr / peak) * 100, 1),
+  };
+}
+
 /** Median of a numeric list (returns 0 for empty input). */
 export function median(values: number[]): number {
   if (values.length === 0) return 0;

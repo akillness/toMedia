@@ -12,6 +12,7 @@ import {
   round,
   signalConfidence,
   spendConfidence,
+  sustainedFatigue,
   summarizeByChannel,
 } from "./metrics";
 
@@ -128,9 +129,10 @@ export function analyze(
       }
     }
 
-    // REFRESH_CREATIVE — profitable but fatigued. Two independent fatigue signals:
+    // REFRESH_CREATIVE — profitable but fatigued. Three independent fatigue signals:
     //  (a) cross-sectional: CTR well below the channel median this period;
-    //  (b) period-over-period: CTR fell sharply vs this entity's own prior period.
+    //  (b) period-over-period: CTR fell sharply vs this entity's own prior period;
+    //  (c) multi-period: a sustained decline across 3+ periods toward the recent peak.
     // We take whichever recovery estimate is larger (capped), so a creative that is
     // decaying against itself is caught even while still above the channel median.
     const baseCtr = medianCtr[row.channel] ?? 0;
@@ -146,15 +148,39 @@ export function analyze(
         ? Math.min(prior / m.ctr - 1, cfg.refreshCap)
         : 0;
 
-      const uplift = Math.max(medianUplift, trendUplift);
+      // Sustained multi-period decline — the most trustworthy fatigue evidence.
+      const trend = sustainedFatigue(m.ctr, row.ctrHistory, cfg.fatigueDeclineRatio);
+      const seriesUplift = trend.declining
+        ? Math.min(trend.peak / m.ctr - 1, cfg.refreshCap)
+        : 0;
+
+      const uplift = Math.max(medianUplift, trendUplift, seriesUplift);
       const impact = round(m.profit * uplift);
       if (uplift > 0 && impact > 0) {
-        const trendDominant = declined && trendUplift >= medianUplift;
-        const signal = trendDominant
-          ? `CTR fell to ${m.ctr} from ${round(prior, 4)} last period ` +
-            `(−${round((1 - m.ctr / prior) * 100, 1)}% vs ≥${cfg.fatigueDeclineRatio * 100}% trigger)`
-          : `CTR ${m.ctr} vs ${row.channel} median ${round(baseCtr, 4)} ` +
+        const seriesDominant =
+          trend.declining && seriesUplift >= medianUplift && seriesUplift >= trendUplift;
+        const trendDominant = !seriesDominant && declined && trendUplift >= medianUplift;
+        let signal: string;
+        // A sustained decline across N periods is high-certainty fatigue, so when it
+        // leads we lift confidence in proportion to the length of the losing run.
+        let refreshConfidence = confidence;
+        if (seriesDominant) {
+          signal =
+            `CTR declined ${trend.consecutiveDrops} periods running to ${m.ctr} ` +
+            `from a ${trend.periods}-period peak of ${trend.peak} (−${trend.dropPct}%)`;
+          refreshConfidence = round(
+            Math.min(1, confidence + 0.05 * trend.consecutiveDrops),
+            2,
+          );
+        } else if (trendDominant) {
+          signal =
+            `CTR fell to ${m.ctr} from ${round(prior, 4)} last period ` +
+            `(−${round((1 - m.ctr / prior) * 100, 1)}% vs ≥${cfg.fatigueDeclineRatio * 100}% trigger)`;
+        } else {
+          signal =
+            `CTR ${m.ctr} vs ${row.channel} median ${round(baseCtr, 4)} ` +
             `(< ${cfg.fatigueRatio * 100}% of median)`;
+        }
         recommendations.push({
           entityId: row.id,
           entityName: row.name,
@@ -165,7 +191,7 @@ export function analyze(
           rationale:
             `Creative fatigue: ${signal}. ` +
             `Refreshing toward the baseline could recover ~$${impact} profit.`,
-          confidence,
+          confidence: refreshConfidence,
           metrics: m,
         });
         continue;
