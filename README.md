@@ -14,6 +14,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Engine](https://img.shields.io/badge/engine-deterministic%20%C2%B7%20explainable-8957e5)](src/lib/engine.ts)
 [![Objective](https://img.shields.io/badge/objective-profit%20vs%20target-f5b301)](#why-it-wins)
+[![Brand](https://img.shields.io/badge/brand-deterministic%20light%20identity-0f172a)](docs/BRAND.md)
 [![Live](https://img.shields.io/badge/▶_live_demo-lever--sepia.vercel.app-success?logo=vercel&logoColor=white)](https://lever-sepia.vercel.app)
 
 <br/>

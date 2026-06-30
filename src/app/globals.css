@@ -3,21 +3,41 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Lever brand identity tokens (see docs/BRAND.md) */
+  --brand-ink: #0f172a;
+  --brand-surface: #ffffff;
+  --brand-line: #e2e8f0;
+  --brand-profit: #047857;
+  --brand-leak: #b91c1c;
+  --brand-fatigue: #b45309;
+  --brand-review: #4338ca;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-line: var(--brand-line);
+  --color-brand-profit: var(--brand-profit);
+  --color-brand-leak: var(--brand-leak);
+  --color-brand-fatigue: var(--brand-fatigue);
+  --color-brand-review: var(--brand-review);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Brand identity accent: ink → profit, anchors the product's top edge. */
+.brand-accent-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand-ink) 0%, var(--brand-ink) 55%, var(--brand-profit) 100%);
 }
+
+/* Lever ships a single, consistent light identity. The UI is built entirely on
+   white surfaces with slate ink; a prefers-color-scheme:dark override would flip
+   the canvas to near-black while every card, the wordmark, and the logomark stay
+   light — an invisible brand and broken contrast. Commit to light intentionally. */
 
 body {
   background: var(--background);

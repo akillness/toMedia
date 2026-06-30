@@ -93,11 +93,22 @@ export default function Home() {
   const actionable = recommendations.filter((r) => r.action !== "KEEP");
 
   return (
+    <>
+    <div className="brand-accent-bar w-full" />
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
       <header className="mb-8">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-black tracking-tight">Lever</span>
-          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">
+        <div className="flex items-center gap-2.5">
+          <LeverMark className="h-7 w-7" />
+          <span
+            className="text-2xl font-black tracking-tight"
+            style={{ color: "var(--brand-ink)" }}
+          >
+            Lever
+          </span>
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+            style={{ backgroundColor: "var(--brand-ink)" }}
+          >
             profit copilot
           </span>
         </div>
@@ -322,6 +333,7 @@ export default function Home() {
         media-buying team.
       </footer>
     </main>
+    </>
   );
 }
 
@@ -381,5 +393,37 @@ function Slider({
         className="mt-1 w-full accent-slate-900"
       />
     </label>
+  );
+}
+/**
+ * Lever logomark — a short arm pressed down lifts a long arm up over a fulcrum
+ * (small force → outsized result, plus an upward profit lift). The pivot sits at
+ * ~1/3 of the bar so the arms are visibly unequal — leverage, not a balanced
+ * seesaw. Two-tone, driven by brand tokens (--brand-ink / --brand-profit), so
+ * the mark restyles with the identity. Decorative: the adjacent "Lever" wordmark
+ * is the accessible name, so the SVG is aria-hidden. Crisp at any DPI, no
+ * network. Mirrors the registered app icon / favicon.
+ */
+function LeverMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      fill="none"
+    >
+      {/* fulcrum — apex sits a hair below the bar so the pivot reads crisp */}
+      <path d="M12.6 21 L17.4 28.5 L7.8 28.5 Z" fill="var(--brand-ink)" />
+      {/* lever bar: short left arm (5→12.6) down, long right arm (12.6→28) up */}
+      <path
+        d="M5 24 L28 9.8"
+        stroke="var(--brand-ink)"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+      />
+      {/* lifted weight — the profit point on the long arm */}
+      <circle cx="28" cy="9.8" r="2.8" fill="var(--brand-profit)" />
+    </svg>
   );
 }
