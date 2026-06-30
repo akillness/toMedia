@@ -33,10 +33,11 @@ literal, and a subtle upward profit lift.
 - UI: Geist Sans. Numerals/metrics: Geist Mono. Headings tight tracking, black weight for wordmark.
 
 ## Asset inventory (registered)
-- `src/app/icon.png` — app icon / favicon (lever-on-fulcrum mark, ink on white).
-- `src/app/apple-icon.png` — touch icon.
-- `src/app/opengraph-image.png` — 1536×1024 social card.
-- Inline header logomark — hand-authored SVG (vector, theme-aware, no network) in `page.tsx`.
+- `src/app/icon.png` (512²) + `src/app/favicon.ico` (16/32/48) — app icon / favicon: the Cycle-63 god-tibo-imagen lever-on-fulcrum mark, ink on white (raw + normalized sources in `brand-raw/`).
+- `src/app/apple-icon.png` (180²) — touch icon.
+- `src/app/opengraph-image.png` / `src/app/twitter-image.png` — 1200×630 social card (`brand-raw/build-og.sh` composites the mark with hand-set vector typography).
+- `src/app/manifest.ts` → `/manifest.webmanifest` — installable web app manifest (name/short_name, `theme_color` ink, `background_color` white, icon refs); `viewport.themeColor` in `layout.tsx` tints mobile browser chrome ink.
+- Inline header logomark — hand-authored SVG (vector, theme-aware, no network) in `page.tsx`, the precise twin of the registered raster mark.
 
 ## Acceptance criteria
 1. A distinct, on-brand lever symbol replaces the default Next.js favicon.

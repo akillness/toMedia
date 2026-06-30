@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -41,6 +41,16 @@ export const metadata: Metadata = {
     description:
       "Pause leaks, scale winners, refresh fatigued creative — each move shown with the math.",
   },
+};
+
+// Tint mobile browser chrome with brand ink so the app reads as a product, not a
+// page. `width=device-width, initialScale=1` keeps the dense numeric UI honest on
+// phones. themeColor lives in the dedicated viewport export per Next.js metadata API.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0f172a",
+  colorScheme: "light",
 };
 
 export default function RootLayout({

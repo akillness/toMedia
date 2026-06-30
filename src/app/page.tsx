@@ -35,7 +35,7 @@ const ACTION_LABEL: Record<RecommendationAction, string> = {
 
 export default function Home() {
   const [rows, setRows] = useState<AdRow[]>(SAMPLE_DATA);
-  const [source, setSource] = useState("Seeded demo dataset");
+  const [source, setSource] = useState("Sample dataset");
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [config, setConfig] = useState<EngineConfig>(DEFAULT_CONFIG);
@@ -73,7 +73,7 @@ export default function Home() {
 
   function reset() {
     setRows(SAMPLE_DATA);
-    setSource("Seeded demo dataset");
+    setSource("Sample dataset");
     setError(null);
   }
 
@@ -140,12 +140,18 @@ export default function Home() {
       </section>
 
       <section className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
-        <div className="text-sm">
-          <span className="font-semibold text-slate-900">Projected impact: </span>
-          <span className="font-bold tabular-nums text-emerald-700">
-            {usd(totals.projectedImpactUsd)}
-          </span>
-          <span className="tabular-nums text-slate-500"> across {actionable.length} actions</span>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Projected profit lift
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black tabular-nums text-emerald-700">
+              {usd(totals.projectedImpactUsd)}
+            </span>
+            <span className="text-sm tabular-nums text-slate-500">
+              across {actionable.length} {actionable.length === 1 ? "action" : "actions"}
+            </span>
+          </div>
         </div>
         <div className="ml-auto flex items-center gap-3">
           <label
@@ -165,7 +171,7 @@ export default function Home() {
             onClick={reset}
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Reset demo
+            Reset sample
           </button>
           <button
             onClick={exportCsv}
@@ -224,7 +230,7 @@ export default function Home() {
             onChange={(scaleStep) => setConfig((c) => ({ ...c, scaleStep }))}
           />
         </div>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-slate-500">
           Raise Target ROAS above 1.0 to flag profitable-but-under-goal entities for{" "}
           <span className="font-semibold text-indigo-600">Review</span>.
         </p>
@@ -253,7 +259,7 @@ export default function Home() {
               <div className="mt-1 text-xs tabular-nums text-slate-500">
                 {usd(c.spend)} spend · {usd(c.profit)} profit
               </div>
-              <div className="text-xs tabular-nums text-slate-400">{c.entities} entities</div>
+              <div className="text-xs tabular-nums text-slate-500">{c.entities} entities</div>
             </div>
           ))}
         </div>
@@ -276,7 +282,7 @@ export default function Home() {
           <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
             <p className="text-sm font-semibold text-slate-700">No data yet</p>
             <p className="mt-1 text-sm text-slate-500">
-              Upload a CSV export from any ad platform, or reset to the seeded demo.
+              Upload a CSV export from any ad platform, or reset to the sample dataset.
             </p>
           </div>
         ) : actionable.length === 0 ? (
@@ -302,9 +308,9 @@ export default function Home() {
                   {ACTION_LABEL[r.action]}
                 </span>
                 <span className="font-semibold text-slate-900">{r.entityName}</span>
-                <span className="text-xs uppercase text-slate-400">{r.channel}</span>
+                <span className="text-xs uppercase text-slate-500">{r.channel}</span>
                 <span
-                  className="text-xs font-medium tabular-nums text-slate-400"
+                  className="text-xs font-medium tabular-nums text-slate-500"
                   title="Confidence from spend depth & conversion volume"
                 >
                   {Math.round(r.confidence * 100)}% conf
@@ -328,7 +334,7 @@ export default function Home() {
         </ul>
       </section>
 
-      <footer className="mt-10 text-center text-xs text-slate-400">
+      <footer className="mt-10 text-center text-xs text-slate-500">
         Lever · deterministic, explainable, profit-objective. Built for It&apos;s Today Media&apos;s
         media-buying team.
       </footer>
