@@ -4,6 +4,7 @@ import {
   FirestoreStorage,
   createStorage,
   hasFirebaseConfig,
+  resetStorageCache,
 } from "./storage";
 import type { AdRow } from "./types";
 
@@ -59,6 +60,7 @@ describe("storage selection", () => {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
     }
+    resetStorageCache();
   });
 
   it("hasFirebaseConfig is false without credentials", () => {
@@ -80,5 +82,13 @@ describe("storage selection", () => {
     for (const k of keys) delete process.env[k];
     process.env.GOOGLE_APPLICATION_CREDENTIALS = "/path/sa.json";
     expect(hasFirebaseConfig()).toBe(true);
+  });
+
+  it("memoizes the adapter so in-memory data persists across calls", () => {
+    for (const k of keys) delete process.env[k];
+    resetStorageCache();
+    const a = createStorage();
+    const b = createStorage();
+    expect(a).toBe(b); // same instance within a process
   });
 });

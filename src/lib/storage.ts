@@ -138,7 +138,22 @@ export function hasFirebaseConfig(): boolean {
  * Selects the backing store: Firestore in production (when configured),
  * in-memory otherwise. The engine and UI depend only on `StorageAdapter`,
  * so this swap is invisible to business logic.
+ *
+ * Memoized per process so the in-memory adapter actually persists across
+ * requests within a running server (Firestore is stateless either way).
  */
+let cached: StorageAdapter | null = null;
+
 export function createStorage(): StorageAdapter {
-  return hasFirebaseConfig() ? new FirestoreStorage() : new InMemoryStorage();
+  if (!cached) {
+    cached = hasFirebaseConfig()
+      ? new FirestoreStorage()
+      : new InMemoryStorage();
+  }
+  return cached;
+}
+
+/** Test/maintenance hook: drop the memoized adapter so the next call rebuilds it. */
+export function resetStorageCache(): void {
+  cached = null;
 }
