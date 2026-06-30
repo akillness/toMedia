@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyze } from "./engine";
-import { computeMetrics, safeDiv, median } from "./metrics";
+import { computeMetrics, safeDiv, median, signalConfidence } from "./metrics";
 import { parseCsv } from "./csv";
 import type { AdRow } from "./types";
 
@@ -148,5 +148,38 @@ describe("csv parsing", () => {
   it("returns empty for header-only or blank input", () => {
     expect(parseCsv("")).toEqual([]);
     expect(parseCsv("id,name,spend")).toEqual([]);
+  });
+});
+
+describe("recommendation confidence", () => {
+  it("signalConfidence rises with spend depth and conversion volume", () => {
+    const thin = signalConfidence(250, 5, 250, 5);
+    const deep = signalConfidence(4000, 80, 250, 5);
+    expect(deep).toBeGreaterThan(thin);
+    expect(deep).toBe(1); // saturates at full signal
+    expect(thin).toBeGreaterThan(0);
+    expect(thin).toBeLessThan(1);
+  });
+
+  it("clamps to the 0..1 range and never returns NaN", () => {
+    expect(signalConfidence(0, 0, 250, 5)).toBe(0);
+    expect(signalConfidence(1e9, 1e9, 250, 5)).toBe(1);
+  });
+
+  it("weights conversion volume above spend (0.6 vs 0.4)", () => {
+    // full conversions, zero spend vs full spend, zero conversions
+    expect(signalConfidence(0, 20, 250, 5)).toBe(0.6);
+    expect(signalConfidence(1000, 0, 250, 5)).toBe(0.4);
+  });
+
+  it("attaches a confidence score to every recommendation", () => {
+    const { recommendations } = analyze([
+      row({ id: "s", spend: 1000, revenue: 2000, conversions: 50, clicks: 1000, impressions: 30000 }),
+      row({ id: "p", spend: 1000, revenue: 400, conversions: 20, clicks: 800, impressions: 50000 }),
+    ]);
+    for (const r of recommendations) {
+      expect(r.confidence).toBeGreaterThanOrEqual(0);
+      expect(r.confidence).toBeLessThanOrEqual(1);
+    }
   });
 });

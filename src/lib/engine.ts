@@ -5,7 +5,7 @@ import type {
   PortfolioReallocation,
   Recommendation,
 } from "./types";
-import { channelMedianCtr, computeMetrics, round } from "./metrics";
+import { channelMedianCtr, computeMetrics, round, signalConfidence } from "./metrics";
 
 export const DEFAULT_CONFIG: EngineConfig = {
   targetRoas: 1.0,
@@ -36,6 +36,12 @@ export function analyze(
   for (const row of rows) {
     const m = computeMetrics(row);
     const hasSpendSignal = row.spend >= cfg.minSpend;
+    const confidence = signalConfidence(
+      row.spend,
+      row.conversions,
+      cfg.minSpend,
+      cfg.minConversions,
+    );
 
     // PAUSE — stop the bleed on a losing, high-signal entity.
     if (m.profit < 0 && hasSpendSignal && row.conversions >= cfg.minConversions) {
@@ -50,6 +56,7 @@ export function analyze(
           `Losing money: ROAS ${m.roas} (< breakeven ${cfg.targetRoas}), ` +
           `profit $${m.profit} on $${row.spend} spend. ` +
           `Pausing stops ~$${round(Math.abs(m.profit))} of loss this period.`,
+        confidence,
         metrics: m,
       });
       continue;
@@ -72,6 +79,7 @@ export function analyze(
             `Strong performer: ROAS ${m.roas} (≥ ${round(cfg.targetRoas * cfg.scaleTrigger, 2)}). ` +
             `Scaling budget +${cfg.scaleStep * 100}% ($${incSpend}) at ${cfg.marginalEfficiency * 100}% ` +
             `marginal efficiency projects ~$${incProfit} extra profit.`,
+          confidence,
           metrics: m,
         });
         continue;
@@ -100,6 +108,7 @@ export function analyze(
           rationale:
             `Creative fatigue: CTR ${m.ctr} vs ${row.channel} median ${round(baseCtr, 4)} ` +
             `(< ${cfg.fatigueRatio * 100}% of median). Refreshing toward median could recover ~$${impact} profit.`,
+          confidence,
           metrics: m,
         });
         continue;
@@ -117,6 +126,7 @@ export function analyze(
       rationale: hasSpendSignal
         ? `Healthy and stable: ROAS ${m.roas}, profit $${m.profit}. Hold and monitor.`
         : `Insufficient signal: $${row.spend} spend below $${cfg.minSpend} threshold. Gather more data.`,
+      confidence,
       metrics: m,
     });
   }

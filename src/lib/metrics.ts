@@ -24,6 +24,25 @@ export function computeMetrics(row: AdRow): Metrics {
   };
 }
 
+/**
+ * Signal-strength confidence in a recommendation, 0..1.
+ *
+ * Combines spend depth (vs the actionable threshold) and conversion volume
+ * (statistical mass): a $5k campaign with 50 conversions is far more trustworthy
+ * than a $260 campaign with 6. Returns a smooth score so the UI can grade trust.
+ */
+export function signalConfidence(
+  spend: number,
+  conversions: number,
+  minSpend: number,
+  minConversions: number,
+): number {
+  const spendScore = Math.min(1, safeDiv(spend, minSpend * 4));
+  const convScore = Math.min(1, safeDiv(conversions, minConversions * 4));
+  return round(0.4 * spendScore + 0.6 * convScore, 2);
+}
+
+
 /** Median of a numeric list (returns 0 for empty input). */
 export function median(values: number[]): number {
   if (values.length === 0) return 0;

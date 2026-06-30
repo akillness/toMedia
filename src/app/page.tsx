@@ -142,6 +142,12 @@ export default function Home() {
                 </span>
                 <span className="font-semibold text-slate-900">{r.entityName}</span>
                 <span className="text-xs uppercase text-slate-400">{r.channel}</span>
+                <span
+                  className="text-xs font-medium text-slate-400"
+                  title="Confidence from spend depth & conversion volume"
+                >
+                  {Math.round(r.confidence * 100)}% conf
+                </span>
                 {r.projectedImpactUsd > 0 && (
                   <span className="ml-auto text-sm font-bold text-emerald-700">
                     +{usd(r.projectedImpactUsd)}
