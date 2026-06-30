@@ -12,3 +12,4 @@ Each entry = one full jeo cycle (change → build → test → real-operation ve
 | 6 | Persist API | `POST /api/analyze {persist,name}` → `createStorage().saveDataset` returns `datasetId` | server: `datasetId=ds-1` |
 | 7 | Channel breakdown | `summarizeByChannel` (engine `byChannel`) + UI breakdown cards + 2 tests | build ✓ · 26 tests ✓ |
 | 8 | What-if simulator | live EngineConfig sliders (targetRoas/scaleTrigger/scaleStep) re-run analyze in UI | build ✓ · 26 tests ✓ |
+| 9 | Export | `recommendationsToCsv` (escaped) + UI "Export CSV" download + 3 tests | build ✓ · 29 tests ✓ |

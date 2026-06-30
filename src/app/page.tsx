@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { analyze, DEFAULT_CONFIG } from "@/lib/engine";
 import { parseCsv } from "@/lib/csv";
+import { recommendationsToCsv } from "@/lib/export";
 import { SAMPLE_DATA } from "@/lib/sampleData";
 import type { AdRow, EngineConfig, RecommendationAction } from "@/lib/types";
 
@@ -59,6 +60,18 @@ export default function Home() {
     setError(null);
   }
 
+  function exportCsv() {
+    const blob = new Blob([recommendationsToCsv(recommendations)], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lever-recommendations.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const { totals, recommendations, reallocation, byChannel } = result;
   const actionable = recommendations.filter((r) => r.action !== "KEEP");
 
@@ -110,6 +123,12 @@ export default function Home() {
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             Reset demo
+          </button>
+          <button
+            onClick={exportCsv}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Export CSV
           </button>
         </div>
         <p className="w-full text-xs text-slate-500">Source: {source}</p>
