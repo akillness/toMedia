@@ -36,7 +36,7 @@ Lever is the **decision brain** that sits on top of your spend:
 - 🎯 **Target-aware** — raise your ROAS goal above breakeven and profitable-but-under-target entities are flagged **Review** instead of being called "healthy".
 - 🩸 **Catches budget leaks** — spend burning with zero conversions is flagged as the *most urgent* move.
 - 📉 **Detects creative fatigue three ways** — CTR below the channel median, a sharp single-period drop, *and* a sustained multi-period decline versus the creative's recent peak.
-- 💎 **Values first-party LTV** — feed a known lifetime value per conversion and the engine optimizes on *true downstream value*, not just immediately-attributed revenue.
+- 💎 **Values first-party LTV** — feed a known lifetime value per conversion (per entity *or* a per-channel default) and the engine optimizes on *true downstream value*, not just immediately-attributed revenue.
 - 🧭 **Scores the account** with a single 0–100 **health** number and a **per-channel breakdown** for the exec view.
 - 🎛️ **What-if simulator** — tune the engine's thresholds live and watch the action feed re-rank.
 - 📤 **Exports** the ranked actions to CSV for ad-ops, and **persists** datasets (in-memory → Firestore).
@@ -53,7 +53,7 @@ Lever is the **decision brain** that sits on top of your spend:
 | Black-box "AI suggestions" | **Deterministic + explainable** — every move shows its formula |
 
 The core is an **explainable, profit-objective recommendation engine**: pure, deterministic,
-77 unit tests, with a clean seam to attach an LLM for richer natural-language rationales.
+81 unit tests, with a clean seam to attach an LLM for richer natural-language rationales.
 
 ## Quickstart
 

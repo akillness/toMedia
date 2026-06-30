@@ -14,7 +14,7 @@ job-to-be-done and against the tools It's Today Media already builds.
 | PAUSE / SCALE / REFRESH_CREATIVE / KEEP rules, formula-backed | `engine.ts` | ✓ |
 | Period-over-period creative-fatigue (CTR drop vs entity's own prior period) | `engine.ts` | ✓ |
 | Multi-period sustained creative-fatigue (3+ period CTR decline vs recent peak) | `metrics.ts:sustainedFatigue` | ✓ |
-| LTV-weighted revenue (first-party value per conversion) | `metrics.ts:effectiveRevenue` | ✓ |
+| LTV-weighted revenue (per-entity *or* per-channel default value per conversion) | `metrics.ts:effectiveRevenue` | ✓ |
 | Per-recommendation confidence (signal strength) | `metrics.ts:signalConfidence` | ✓ |
 | Portfolio reallocation (free budget → best winner) | `engine.ts:buildReallocation` | ✓ |
 | Per-channel breakdown | `metrics.ts:summarizeByChannel` | ✓ |
@@ -46,6 +46,6 @@ signal-loss and explainability pressures.
 ## Honest gaps (next cycles)
 
 - Time-series creative-fatigue: shipped end-to-end — single-period (`priorCtr`) and sustained multi-period (`ctrHistory` → `sustainedFatigue`, decline-vs-recent-peak with a consecutive-drop guard) signals both feed REFRESH; seasonality/day-of-week decomposition still pending.
-- LTV-weighted revenue: shipped (`ltvPerConversion` → `effectiveRevenue` flows through metrics/totals/health); channel-level LTV curves still pending.
+- LTV-weighted revenue: shipped end-to-end — per-entity `ltvPerConversion` and a per-channel `EngineConfig.channelLtv` default (per-entity wins) both flow through `effectiveRevenue` into metrics/totals/byChannel/health; per-conversion LTV *curves* (cohort/decay over time) still pending.
 - Live OAuth pulls from each ad platform (CSV/seed today).
 - LLM-authored natural-language rationales over the deterministic core.

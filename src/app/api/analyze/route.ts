@@ -3,7 +3,8 @@ import { analyze } from "@/lib/engine";
 import { parseCsv, sanitizeAdRows } from "@/lib/csv";
 import { SAMPLE_DATA } from "@/lib/sampleData";
 import { createStorage } from "@/lib/storage";
-import type { AdRow, EngineConfig } from "@/lib/types";
+import type { AdRow, Channel, EngineConfig } from "@/lib/types";
+import { CHANNELS } from "@/lib/types";
 
 /** Cap the request body so an oversized payload cannot exhaust the lambda. */
 const MAX_ROWS = 5000;
@@ -29,6 +30,17 @@ function sanitizeConfig(input: unknown): Partial<EngineConfig> {
   for (const key of CONFIG_KEYS) {
     const v = raw[key];
     if (typeof v === "number" && Number.isFinite(v) && v >= 0) cfg[key] = v;
+  }
+  // channelLtv is a nested map: keep only known channels with finite, non-negative rates.
+  const ltv = raw.channelLtv;
+  if (ltv != null && typeof ltv === "object") {
+    const rawLtv = ltv as Record<string, unknown>;
+    const clean: Partial<Record<Channel, number>> = {};
+    for (const ch of CHANNELS) {
+      const v = rawLtv[ch];
+      if (typeof v === "number" && Number.isFinite(v) && v >= 0) clean[ch] = v;
+    }
+    if (Object.keys(clean).length > 0) cfg.channelLtv = clean;
   }
   return cfg;
 }

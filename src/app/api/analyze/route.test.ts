@@ -45,6 +45,21 @@ describe("POST /api/analyze", () => {
     expect(res.totals.spend).toBe(1000);
   });
 
+  it("accepts a channel-level LTV map and ignores unknown / negative channels", async () => {
+    const def = await (await post({ rows: [subTargetRow] })).json();
+    expect(def.recommendations[0].action).toBe("KEEP"); // ROAS 1.2 on attributed revenue
+
+    const tuned = await (
+      await post({
+        rows: [subTargetRow],
+        config: { channelLtv: { google: 50, bogus: 99, meta: -5 } },
+      })
+    ).json();
+    // google LTV 50 × 40 conv = 2000 → ROAS 2.0 ≥ 1.25 → SCALE; bad keys dropped
+    expect(tuned.recommendations[0].action).toBe("SCALE");
+    expect(tuned.totals.revenue).toBe(2000);
+  });
+
   it("falls back to the seeded dataset on an empty/malformed body", async () => {
     const res = await (await post({})).json();
     expect(res.recommendations.length).toBeGreaterThan(0);

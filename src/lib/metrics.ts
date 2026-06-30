@@ -12,19 +12,33 @@ export function round(value: number, decimals = 2): number {
 }
 
 /**
- * Revenue the engine should optimize against. When a first-party lifetime value
- * per conversion is supplied, downstream value (`conversions × ltvPerConversion`)
- * is the authoritative number; otherwise the immediately-attributed revenue is used.
+ * Revenue the engine should optimize against, in precedence order:
+ *  1. a row's own first-party `ltvPerConversion` (`conversions × ltv`);
+ *  2. a channel-level LTV default (`conversions × channelLtv[channel]`);
+ *  3. the immediately-attributed revenue.
+ * So downstream value drives profit decisions whenever it is known — per entity
+ * if available, else per channel — and falls back to attributed revenue otherwise.
  */
-export function effectiveRevenue(row: AdRow): number {
-  return row.ltvPerConversion != null
-    ? round(row.conversions * row.ltvPerConversion)
-    : row.revenue;
+export function effectiveRevenue(
+  row: AdRow,
+  channelLtv?: Partial<Record<Channel, number>>,
+): number {
+  if (row.ltvPerConversion != null) {
+    return round(row.conversions * row.ltvPerConversion);
+  }
+  const ltv = channelLtv?.[row.channel];
+  if (ltv != null && Number.isFinite(ltv) && ltv > 0) {
+    return round(row.conversions * ltv);
+  }
+  return row.revenue;
 }
 
 /** Derive performance metrics for a single ad row. Pure, no side effects. */
-export function computeMetrics(row: AdRow): Metrics {
-  const revenue = effectiveRevenue(row);
+export function computeMetrics(
+  row: AdRow,
+  channelLtv?: Partial<Record<Channel, number>>,
+): Metrics {
+  const revenue = effectiveRevenue(row, channelLtv);
   return {
     cpa: round(safeDiv(row.spend, row.conversions)),
     epc: round(safeDiv(revenue, row.clicks)),
@@ -156,7 +170,10 @@ export function channelMedianCtr(rows: AdRow[]): Record<Channel, number> {
 }
 
 /** Aggregate spend/revenue/profit/ROAS per channel — the portfolio breakdown. */
-export function summarizeByChannel(rows: AdRow[]): ChannelSummary[] {
+export function summarizeByChannel(
+  rows: AdRow[],
+  channelLtv?: Partial<Record<Channel, number>>,
+): ChannelSummary[] {
   const acc = new Map<
     Channel,
     { spend: number; revenue: number; entities: number }
@@ -164,7 +181,7 @@ export function summarizeByChannel(rows: AdRow[]): ChannelSummary[] {
   for (const row of rows) {
     const cur = acc.get(row.channel) ?? { spend: 0, revenue: 0, entities: 0 };
     cur.spend += row.spend;
-    cur.revenue += effectiveRevenue(row);
+    cur.revenue += effectiveRevenue(row, channelLtv);
     cur.entities += 1;
     acc.set(row.channel, cur);
   }

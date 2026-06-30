@@ -120,4 +120,11 @@ export interface EngineConfig {
   minSpend: number;
   /** Minimum conversions before PAUSE is trusted. */
   minConversions: number;
+  /**
+   * Average first-party lifetime value per conversion by channel. Used as a
+   * fallback when a row carries no per-row `ltvPerConversion`, so the profit
+   * objective can reflect downstream value when only channel-level LTV is known.
+   * Per-row `ltvPerConversion` always wins over this channel default.
+   */
+  channelLtv?: Partial<Record<Channel, number>>;
 }

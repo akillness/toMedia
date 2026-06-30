@@ -494,6 +494,35 @@ describe("LTV-weighted revenue", () => {
     expect(r.ltvPerConversion).toBe(95);
     expect(parseCsv("campaign,platform,cost\nX,Google,500")[0].ltvPerConversion).toBeUndefined();
   });
+
+  it("effectiveRevenue falls back to channel-level LTV, with per-row LTV taking precedence", () => {
+    const channelLtv = { google: 80, meta: 50 };
+    // no per-row LTV → value conversions at the channel default
+    expect(effectiveRevenue(row({ channel: "google", revenue: 1400, conversions: 40 }), channelLtv)).toBe(3200);
+    // per-row LTV always wins over the channel default
+    expect(effectiveRevenue(row({ channel: "google", revenue: 1400, conversions: 40, ltvPerConversion: 95 }), channelLtv)).toBe(3800);
+    // channel without a configured LTV → attributed revenue
+    expect(effectiveRevenue(row({ channel: "taboola", revenue: 1400, conversions: 40 }), channelLtv)).toBe(1400);
+    // a zero/invalid channel LTV is ignored → attributed revenue
+    expect(effectiveRevenue(row({ channel: "meta", revenue: 1400, conversions: 40 }), { meta: 0 })).toBe(1400);
+  });
+
+  it("computeMetrics applies channel-level LTV when no per-row LTV is set", () => {
+    const m = computeMetrics(row({ channel: "google", spend: 2000, revenue: 1400, conversions: 40, clicks: 2600 }), { google: 80 });
+    expect(m.roas).toBe(1.6); // 3200 / 2000
+    expect(m.profit).toBe(1200); // 3200 - 2000
+  });
+
+  it("channel LTV flips a sub-target entity to a winner and flows consistently into totals, byChannel, and health", () => {
+    const base = row({ id: "g3", channel: "google", spend: 2000, revenue: 1400, conversions: 40, clicks: 2600, impressions: 88000 });
+    expect(analyze([base]).recommendations[0].action).toBe("PAUSE"); // ROAS 0.7 on attributed revenue
+    const r = analyze([base], { channelLtv: { google: 80 } }); // 40 × 80 = 3200 → ROAS 1.6
+    expect(r.recommendations[0].action).toBe("SCALE");
+    expect(r.totals.revenue).toBe(3200);
+    expect(r.totals.roas).toBe(1.6);
+    expect(r.byChannel[0].revenue).toBe(3200);
+    expect(r.accountHealth).toBeGreaterThan(analyze([base]).accountHealth);
+  });
 });
 describe("REVIEW tier (profitable but below the buyer's target ROAS)", () => {
   it("flags a profitable sub-target entity as REVIEW when targetRoas > breakeven", () => {
