@@ -7,7 +7,7 @@
 **Turn four fragmented ad dashboards into one ranked "do this next" list — every move shown with the math and a projected dollar impact.**
 
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)](#-verify-it-yourself)
-[![Tests](https://img.shields.io/badge/tests-89%20passing-brightgreen)](src/lib/engine.test.ts)
+[![Tests](https://img.shields.io/badge/tests-154%20passing-brightgreen)](src/lib/engine.test.ts)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Deploy](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://lever-sepia.vercel.app)
@@ -52,6 +52,7 @@ Lever is the **decision brain** that sits on top of your spend:
 - 🧭 **Scores the account** with a single 0–100 **health** number and a **per-channel breakdown** for the exec view.
 - 🎛️ **What-if simulator** — tune the engine's thresholds live and watch the action feed re-rank.
 - 📤 **Exports** the ranked actions to CSV for ad-ops, and **persists** datasets (in-memory → Firestore).
+- 🔌 **Connects live data** — pull real campaign reports straight from **Google Ads, Meta, Taboola, and TikTok** free-tier APIs; API keys are sealed in an **AES-256-GCM encrypted vault** (decrypted only in-process) and results auto-**sync to a Google Sheet** (newest-first) via Apps Script.
 - 🤝 **Argues for itself**: every recommendation shows the math, so a buyer can act on it *and defend it*.
 
 > It doesn't optimize vanity ROAS. It optimizes **profit against target** — the affiliate north-star.
@@ -65,7 +66,7 @@ Lever is the **decision brain** that sits on top of your spend:
 | Black-box "AI suggestions" | **Deterministic + explainable** — every move shows its formula |
 
 The core is an **explainable, profit-objective recommendation engine**: pure, deterministic,
-89 unit tests, with a clean seam to attach an LLM for richer natural-language rationales.
+154 unit tests, with a clean seam to attach an LLM for richer natural-language rationales.
 
 ## Quickstart
 
@@ -88,7 +89,7 @@ curl -X POST http://localhost:3000/api/analyze \
 ## 🔬 Verify it yourself
 
 ```bash
-npm test             # 89 passing — engine rules, metrics, confidence, storage, CSV, export, API route
+npm test             # 154 passing — engine, metrics, confidence, storage, CSV, export, secrets vault, channel connectors, Sheets sync, ingest pipeline, API routes
 npm run build        # production build + full TypeScript check
 ```
 
@@ -109,6 +110,13 @@ src/lib/storage.ts      ← StorageAdapter seam (in-memory ↔ Firestore, env-se
 src/app/page.tsx        ← dashboard: KPIs, health, channel breakdown, what-if sliders, action feed
 src/app/api/analyze     ← analyze + optional persist (agent/MCP entry point)
 src/app/api/datasets    ← list persisted datasets
+src/lib/secrets.ts      ← AES-256-GCM encrypted credential vault (file ↔ in-memory, scrypt-derived key)
+src/lib/channels/*      ← free-tier API connectors (google·meta·taboola·tiktok): normalize → AdRow[]
+src/lib/sheets.ts       ← newest-first, de-duplicated Google-Sheets sync payload + push client
+src/lib/pipeline.ts     ← ingest (connectors) → analyze → persist → sync orchestration
+apps-script/Code.gs     ← Apps Script web app: upsert newest-first, daily trigger, retention trim
+src/app/api/credentials ← seal/list/remove channel API keys (never readable back; admin-gated)
+src/app/api/ingest      ← run the real-data pipeline for a reporting window (admin-gated)
 ```
 
 ## Going to production
@@ -119,14 +127,22 @@ src/app/api/datasets    ← list persisted datasets
   interface in `src/lib/storage.ts`; the engine and UI need **zero changes**. Set
   `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` as Vercel
   environment variables and `createStorage()` switches from in-memory to Firestore automatically.
-- **Live data**: swap the CSV/seed ingest for OAuth pulls from each ad platform behind the same
-  `AdRow[]` contract.
+- **Live data**: free-tier channel connectors are implemented (`src/lib/channels/*`) behind the
+  same `AdRow[]` contract. Seal each platform's API keys via `POST /api/credentials` (sealed with
+  AES-256-GCM under `LEVER_SECRET_KEY`, never returned over HTTP), then run `POST /api/ingest`
+  with a `{start,end}` window to pull → analyze → persist → sync. See
+  [`docs/05-pm-roadmap.md`](docs/05-pm-roadmap.md) for the per-channel free-tier onboarding table.
+- **Google Sheets**: deploy `apps-script/Code.gs` as a web app, set `LEVER_SHEETS_WEBHOOK_URL` +
+  `LEVER_SHEETS_TOKEN`, and every ingest upserts results into your sheet newest-first, with a
+  daily maintenance trigger.
 
 ## Project docs
 
 - [`docs/target-intel-itstoday.md`](docs/target-intel-itstoday.md) — the brief this was built for
 - [`docs/01-brainstorm-decision.md`](docs/01-brainstorm-decision.md) — idea & brand decision
 - [`docs/02-spec.md`](docs/02-spec.md) — product spec
+- [`docs/05-pm-roadmap.md`](docs/05-pm-roadmap.md) — PM roadmap, real-data architecture & free-tier onboarding
+- [`docs/CYCLES.md`](docs/CYCLES.md) — full build-cycle log (50 cycles)
 
 ---
 

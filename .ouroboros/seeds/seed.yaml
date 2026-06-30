@@ -1,0 +1,32 @@
+# Ouroboros seed — Lever real-data integration loop
+# Frozen contract. Execution iterates against this; drift is measured against it.
+id: lever-realdata-2026-06
+goal: >
+  Make Lever ingest REAL ad-platform data through free-tier channel APIs, store
+  credentials encrypted (decrypt only in-process to use), persist datasets in a
+  local file DB without Firebase, and push analysis results to a Google Sheet
+  (newest-first) automated by Apps Script. Advance the product plan (PM + spec)
+  and prove the end-to-end pipeline works with tests + a live local run.
+
+constraints:
+  - "TypeScript / Next.js app already in repo — extend it, do not rewrite."
+  - "Server-only modules use node:crypto + node:fs; never import them from client code (page.tsx)."
+  - "Credentials never stored in plaintext at rest: AES-256-GCM, key from LEVER_SECRET_KEY (scrypt-derived). Auth-tag tamper detection."
+  - "All new logic must be pure/injectable enough to unit-test without real network or real secrets."
+  - "Free-tier only: document each channel's free developer-API path; connectors fetch with an injectable fetcher so tests run offline."
+  - "Zero-config demo must still work: no env => in-memory store, connectors report 'not configured' clearly."
+  - "Keep existing 81 tests green; add tests for every new module."
+
+acceptance_criteria:
+  - "Encrypted vault: round-trip set/get a credential; tampered ciphertext or wrong key throws; nothing readable plaintext on disk."
+  - "Each of google/meta/taboola/tiktok has a connector that normalizes a raw free-tier API response into canonical AdRow[] and reports config state."
+  - "LocalFileStorage implements StorageAdapter, persists across instances, lists newest-first; createStorage() selects it via LEVER_DB_PATH."
+  - "Sheets sync builds a newest-first, de-duplicated payload and posts to an Apps Script web app; Apps Script appends newest-first with a time trigger."
+  - "Ingest pipeline: connectors (when configured) -> normalize -> store -> analyze -> sync; exposed via API routes; graceful when unconfigured."
+  - "docs: PM roadmap + updated spec + .env.example cover secrets, channels, local DB, Sheets."
+  - "npx vitest run, eslint, and next build all green; >= 20 documented cycles in docs/CYCLES.md; README updated; pushed to origin."
+
+verify:
+  - "npm test"
+  - "npm run lint"
+  - "npm run build"

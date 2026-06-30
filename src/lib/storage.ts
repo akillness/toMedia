@@ -1,4 +1,6 @@
 import type { AdRow } from "./types";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 
 export interface StoredDataset {
   id: string;
@@ -123,6 +125,74 @@ export class FirestoreStorage implements StorageAdapter {
   }
 }
 
+/**
+ * Local file-backed adapter — real persistence with zero cloud dependency.
+ * Stores every dataset as one JSON document on disk, so a local run (or a
+ * single-node deployment) keeps data across restarts without Firebase.
+ *
+ * Selected when `LEVER_DB_PATH` is set (and Firebase is not configured).
+ */
+interface FileRecord extends StoredDataset {
+  /** Monotonic insertion sequence — deterministic tie-break for equal createdAt. */
+  seq: number;
+}
+
+export class LocalFileStorage implements StorageAdapter {
+  constructor(private readonly path: string) {}
+
+  private async load(): Promise<FileRecord[]> {
+    try {
+      const raw = await readFile(this.path, "utf8");
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as FileRecord[]) : [];
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw err;
+    }
+  }
+
+  private async save(records: FileRecord[]): Promise<void> {
+    await mkdir(dirname(this.path), { recursive: true });
+    await writeFile(this.path, JSON.stringify(records, null, 2));
+  }
+
+  private strip(r: FileRecord): StoredDataset {
+    return { id: r.id, name: r.name, rows: r.rows, createdAt: r.createdAt };
+  }
+
+  async saveDataset(name: string, rows: AdRow[]): Promise<StoredDataset> {
+    const records = await this.load();
+    const seq = records.reduce((m, r) => Math.max(m, r.seq ?? 0), 0) + 1;
+    const record: FileRecord = {
+      id: `ds-${seq}`,
+      name,
+      rows,
+      createdAt: Date.now(),
+      seq,
+    };
+    records.push(record);
+    await this.save(records);
+    return this.strip(record);
+  }
+
+  async getDataset(id: string): Promise<StoredDataset | null> {
+    const found = (await this.load()).find((r) => r.id === id);
+    return found ? this.strip(found) : null;
+  }
+
+  async listDatasets(): Promise<StoredDataset[]> {
+    const records = await this.load();
+    return records
+      .sort((a, b) => b.createdAt - a.createdAt || (b.seq ?? 0) - (a.seq ?? 0))
+      .map((r) => this.strip(r));
+  }
+}
+
+/** True when a local file DB path is configured. */
+export function hasLocalDbConfig(): boolean {
+  return Boolean(process.env.LEVER_DB_PATH);
+}
+
 /** True when Firebase service-account env vars are configured. */
 export function hasFirebaseConfig(): boolean {
   return Boolean(
@@ -147,7 +217,9 @@ export function createStorage(): StorageAdapter {
   if (!cached) {
     cached = hasFirebaseConfig()
       ? new FirestoreStorage()
-      : new InMemoryStorage();
+      : hasLocalDbConfig()
+        ? new LocalFileStorage(process.env.LEVER_DB_PATH as string)
+        : new InMemoryStorage();
   }
   return cached;
 }

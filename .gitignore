@@ -42,3 +42,7 @@ next-env.d.ts
 
 # jeo agent workdir (never commit; may contain session secrets)
 .jeo/
+
+# Lever encrypted credential vault + local file DB (never commit secrets/data)
+.lever/
+*.enc.json
