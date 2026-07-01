@@ -7,10 +7,12 @@
  * (or page heading) is the accessible name, so the SVG is aria-hidden. Crisp at
  * any DPI, no network. Mirrors the registered app icon / favicon.
  *
- * Shared by the header (page.tsx), the branded 404 (not-found.tsx), and the
- * branded error boundary (error.tsx) — one definition, not three copies of the
- * same path data, so the mark can never drift between the pages a real
- * production visitor actually lands on.
+ * Shared by the header (page.tsx), the branded 404 (not-found.tsx), the
+ * branded error boundary (error.tsx), and the root-layout error boundary
+ * (global-error.tsx) — one definition, not four copies of the same path
+ * data, so the mark can never drift between the pages a real production
+ * visitor actually lands on.
+
  */
 export function LeverMark({ className }: { className?: string }) {
   return (

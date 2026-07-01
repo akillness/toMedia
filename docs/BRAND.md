@@ -42,7 +42,8 @@ literal, and a subtle upward profit lift.
 - Per-action symbol glyphs (Cycle 69) — `ActionIcon` in `page.tsx`: five small hand-authored `currentColor` SVGs (pause bars / scale arrow / refresh arrows / review magnifier / keep check) rendered inside every recommendation's action badge, so the identity carries a *symbol system*, not just color-coded text — also a second always-visible cue for colorblind readers.
 - `src/app/manifest.ts` → `/manifest.webmanifest` — installable web app manifest (name/short_name, `theme_color` ink, `background_color` white, icon refs); `viewport.themeColor` in `layout.tsx` tints mobile browser chrome ink.
 - Shared `LeverMark` component (`src/components/LeverMark.tsx`, Cycle 70) — hand-authored SVG (vector, theme-aware, no network), the precise twin of the registered raster mark; used by the header (`page.tsx`) and both real-service error surfaces below so the mark never drifts between pages.
-- Branded `not-found.tsx` / `error.tsx` (Cycle 70) — a real deployment's users land on 404s and render errors, not just the happy path; both carry the `LeverMark`, brand-accent-bar, and Lever's declarative voice instead of falling back to Next.js's anonymous defaults. `error.tsx` never echoes `error.message` to the visitor (it may carry upload/connector data) and offers `reset()` as a real recovery path.
+- Branded `not-found.tsx` / `error.tsx` / `global-error.tsx` (Cycle 70–72) — a real deployment's users land on 404s and render errors, not just the happy path; all three carry the `LeverMark`, brand-accent-bar, and Lever's declarative voice instead of falling back to Next.js's anonymous defaults. `error.tsx` covers render errors inside the root layout's content; `global-error.tsx` (Cycle 72) is the required fallback for a crash in `layout.tsx` itself — it defines its own `<html>`/`<body>` and imports `globals.css` directly since the normal layout may not have rendered. Neither ever echoes `error.message` to the visitor (it may carry upload/connector data); both offer `reset()` as a real recovery path.
+
 - JSON-LD `SoftwareApplication` structured data + `robots.ts` + `sitemap.ts` (Cycle 69) — production SEO hygiene so the identity resolves correctly to search engines and AI crawlers, not just to human visitors.
 
 
@@ -64,7 +65,8 @@ the reason the mark is legible from a favicon down to a 12px action badge.
 5. Every recommendation action badge carries both a color and a distinct symbol (colorblind-safe, not color-only).
 6. Empty/zero-data states use a branded illustration, not a bare text placeholder.
 7. `robots.txt` / `sitemap.xml` / JSON-LD resolve for production crawlers.
-8. 404 and unexpected-render-error pages carry the same mark and voice as the rest of the product — no anonymous framework default.
+8. 404 and unexpected-render-error pages — including a root-layout-level crash — carry the same mark and voice as the rest of the product — no anonymous framework default.
+
 9. Build ✓ · all tests ✓ · lint 0 · live render verified.
 
 
