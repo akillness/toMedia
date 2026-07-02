@@ -54,7 +54,8 @@ Lever is the **decision brain** that sits on top of your spend:
 - 🧭 **Scores the account** with a single 0–100 **health** number and a **per-channel breakdown** for the exec view.
 - 🎛️ **What-if simulator** — tune the engine's thresholds live and watch the action feed re-rank.
 - 📤 **Exports** the ranked actions to CSV for ad-ops, and **persists** datasets (in-memory → Firestore).
-- 🔌 **Connects live data** — pull real campaign reports straight from **Google Ads, Meta, Taboola, and TikTok** free-tier APIs; API keys are sealed in an **AES-256-GCM encrypted vault** (decrypted only in-process) and results auto-**sync to a Google Sheet** (newest-first) via Apps Script. Every network seam is **timeout-bounded with retrying backoff** (429/5xx-aware), so a free-tier rate-limit blip never fails an ingest run.
+- 🔌 **Connects live data** — pull real campaign reports straight from the **Google Ads** free-tier API (current MVP scope); API keys are sealed in an **AES-256-GCM encrypted vault** (decrypted only in-process) and results auto-**sync to a Google Sheet** (newest-first) via Apps Script. Every network seam is **timeout-bounded with retrying backoff** (429/5xx-aware), so a free-tier rate-limit blip never fails an ingest run. Meta/Taboola/TikTok connectors are implemented and unit-tested but not yet wired into the active registry — see "Going to production" below.
+
 - 🤝 **Argues for itself**: every recommendation shows the math, so a buyer can act on it *and defend it*.
 
 > It doesn't optimize vanity ROAS. It optimizes **profit against target** — the affiliate north-star.
@@ -92,7 +93,8 @@ curl -X POST http://localhost:3000/api/analyze \
 ## 🔬 Verify it yourself
 
 ```bash
-npm test             # 200 passing — engine, metrics, confidence, storage, CSV, export, secrets vault, channel connectors, Sheets sync, ingest pipeline, API routes
+npm test             # 208 passing — engine, metrics, confidence, storage, CSV, export, secrets vault, channel connectors, Sheets sync, ingest pipeline, API routes
+
 npm run build        # production build + full TypeScript check
 ```
 
@@ -114,7 +116,8 @@ src/app/page.tsx        ← dashboard: KPIs, health, channel breakdown, what-if 
 src/app/api/analyze     ← analyze + optional persist (agent/MCP entry point)
 src/app/api/datasets    ← list persisted datasets
 src/lib/secrets.ts      ← AES-256-GCM encrypted credential vault (file ↔ in-memory, scrypt-derived key)
-src/lib/channels/*      ← free-tier API connectors (google·meta·taboola·tiktok): normalize → AdRow[]
+src/lib/channels/*      ← connectors (google active for MVP; meta·taboola·tiktok implemented, not yet wired — see channels/index.ts): normalize → AdRow[]
+
 src/lib/sheets.ts       ← newest-first, de-duplicated Google-Sheets sync payload + push client
 src/lib/pipeline.ts     ← ingest (connectors) → analyze → persist → sync orchestration
 apps-script/Code.gs     ← Apps Script web app: upsert newest-first, daily trigger, retention trim
@@ -132,12 +135,19 @@ src/app/api/cron/ingest ← Vercel Cron entry point: same pipeline, daily 2-day 
   interface in `src/lib/storage.ts`; the engine and UI need **zero changes**. Set
   `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` as Vercel
   environment variables and `createStorage()` switches from in-memory to Firestore automatically.
-- **Live data**: free-tier channel connectors are implemented (`src/lib/channels/*`) behind the
-  same `AdRow[]` contract. Seal each platform's API keys via `POST /api/credentials` (sealed with
+- **Live data (MVP: Google Ads only)**: the current project goal is proving the deployed service
+  runs on real data end-to-end for one channel before onboarding more. The Google Ads connector
+  (`src/lib/channels/google.ts`) is the only one wired into the active registry
+  (`src/lib/channels/index.ts`); Meta/Taboola/TikTok
+  connectors are fully implemented and unit-tested but intentionally commented out of the
+
+  registry — re-enabling one is a 3-line change (see the comment block at the top of
+  `src/lib/channels/index.ts`). Seal Google Ads API keys via `POST /api/credentials` (sealed with
   AES-256-GCM under `LEVER_SECRET_KEY`, never returned over HTTP), then run `POST /api/ingest`.
   Google Ads also accepts a long-lived `refreshToken`+`clientId`+`clientSecret` instead of a static
   `accessToken` — Lever mints a fresh access token from Google's OAuth2 endpoint on every call, so
   there's no manual token rotation.
+
 - **Multi-tenant**: every credential write/read/delete, `/api/ingest`, and `/api/cron/ingest` accept
   an optional `accountId`. Two tenants' credentials for the same channel are stored under
   independent, non-colliding vault keys (`vaultKey(channel, accountId)`); omit it and everything

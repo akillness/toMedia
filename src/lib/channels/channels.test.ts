@@ -404,26 +404,34 @@ describe("tiktok connector", () => {
 });
 
 describe("connector registry", () => {
-  it("exposes all four channels and resolves by name", () => {
-    expect(allConnectors().map((c) => c.channel)).toEqual([
-      "google",
-      "meta",
-      "taboola",
-      "tiktok",
-    ]);
-    expect(getConnector("meta")).toBe(metaConnector);
+  // MVP scope: only Google Ads is wired into the active registry
+  // (src/lib/channels/index.ts). Meta/Taboola/Tiktok stay fully implemented
+  // and exercised by their own describe blocks above via direct import —
+  // this block only asserts what the registry itself exposes.
+  it("exposes google only for MVP, and resolves it by name", () => {
+    expect(allConnectors().map((c) => c.channel)).toEqual(["google"]);
+    expect(getConnector("google")).toBe(googleConnector);
     expect(getConnector("other")).toBeUndefined();
   });
 
-  it("free-tier catalog lists required credentials per channel", () => {
+  it("does not resolve non-MVP channels through the registry, even though their connectors still exist", () => {
+    expect(getConnector("meta")).toBeUndefined();
+    expect(getConnector("taboola")).toBeUndefined();
+    expect(getConnector("tiktok")).toBeUndefined();
+    expect(metaConnector.channel).toBe("meta");
+    expect(taboolaConnector.channel).toBe("taboola");
+    expect(tiktokConnector.channel).toBe("tiktok");
+  });
+
+  it("free-tier catalog lists required credentials for the MVP channel", () => {
     const cat = freeTierCatalog();
+    expect(cat).toHaveLength(1);
     const google = cat.find((c) => c.channel === "google");
     expect(google?.requiredCredentials).toContain("developerToken");
     expect(google?.docsUrl).toMatch(/^https:\/\//);
-    expect(cat).toHaveLength(4);
   });
 
-  it("every connector returns [] for junk input rather than throwing", () => {
+  it("every registered connector returns [] for junk input rather than throwing", () => {
     for (const c of allConnectors()) {
       expect(c.normalize(null)).toEqual([]);
       expect(c.normalize({ unexpected: true })).toEqual([]);
@@ -438,6 +446,18 @@ describe("connector registry", () => {
       expect(c.normalize(junkRows)).toEqual([]);
     }
   });
+
+  it("non-MVP connectors (meta/taboola/tiktok) still handle junk input safely, unregistered or not", () => {
+    // Kept correct so re-enabling them post-MVP (see index.ts) is a 3-line change.
+    const junkRows = { results: [null, 7, "x"], data: { list: [null, 7, "x"] } };
+    for (const c of [metaConnector, taboolaConnector, tiktokConnector]) {
+      expect(c.normalize(null)).toEqual([]);
+      expect(c.normalize({ unexpected: true })).toEqual([]);
+      expect(() => c.normalize(junkRows)).not.toThrow();
+      expect(c.normalize(junkRows)).toEqual([]);
+    }
+  });
+
 
   it("normalizes the valid rows even when null rows are interleaved", () => {
     const meta = metaConnector.normalize({

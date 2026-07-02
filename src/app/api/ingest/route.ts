@@ -19,13 +19,11 @@ function defaultRange(): DateRange {
 
 /**
  * POST /api/ingest — run the real-data pipeline for a reporting window:
- * pull from every configured channel connector (or analyze caller-supplied
- * rows/csv), persist the dataset, and push results to the Google Sheet.
-/**
- * POST /api/ingest — run the real-data pipeline for a reporting window:
- * pull from every configured channel connector (or analyze caller-supplied
- * rows/csv), persist the dataset, and push results to the Google Sheet.
+ * pull from every configured channel connector (MVP: Google Ads only —
+ * see `src/lib/channels/index.ts`) or analyze caller-supplied rows/csv,
+ * persist the dataset, and push results to the Google Sheet.
  *
+
  * Body: { range?: {start,end}, rows?: AdRow[], csv?: string, name?: string,
  *         config?: Partial<EngineConfig>, accountId?: string, persist?: boolean,
  *         sync?: boolean, sheetsConfig?: boolean }. `accountId` selects which

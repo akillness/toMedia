@@ -10,10 +10,18 @@ import {
 } from "./types";
 
 /**
+ * NOT WIRED INTO MVP: this connector is fully implemented and unit-tested
+ * (see channels.test.ts) but is intentionally left OUT of the active
+ * registry (`src/lib/channels/index.ts`) — the current project goal is a
+ * real-data Google Ads MVP, one channel end-to-end, not a 4-channel
+ * onboarding surface. Re-enable post-MVP by uncommenting the import + the
+ * two registry entries in index.ts; no changes needed here.
+ *
  * Taboola connector — Backstage API campaign-summary report. A Backstage
  * account grants free API access (client-credentials → bearer token). Reads the
  * campaign_breakdown dimension.
  */
+
 const REQUIRED = ["accountId", "accessToken"];
 
 interface TaboolaRow {

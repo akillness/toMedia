@@ -11,11 +11,19 @@ import {
 } from "./types";
 
 /**
+ * NOT WIRED INTO MVP: this connector is fully implemented and unit-tested
+ * (see channels.test.ts) but is intentionally left OUT of the active
+ * registry (`src/lib/channels/index.ts`) — the current project goal is a
+ * real-data Google Ads MVP, one channel end-to-end, not a 4-channel
+ * onboarding surface. Re-enable post-MVP by uncommenting the import + the
+ * two registry entries in index.ts; no changes needed here.
+ *
  * Meta (Facebook/Instagram) connector — Marketing API Insights. A standard
  * access token from a registered app reads your own ad account for free.
  * Conversions/revenue are extracted from the purchase-type `actions` /
  * `action_values` arrays.
  */
+
 const REQUIRED = ["accountId", "accessToken"];
 
 const PURCHASE_TYPES = new Set([

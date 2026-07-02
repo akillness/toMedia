@@ -134,8 +134,9 @@ export const googleConnector: ChannelConnector = {
     for (let page = 0; page < MAX_FETCH_PAGES; page++) {
       const res = await fetchWithRetry(
         fetcher,
-        `https://googleads.googleapis.com/v17/customers/${customerId}/googleAds:search`,
+        `https://googleads.googleapis.com/v24/customers/${customerId}/googleAds:search`,
         {
+
           method: "POST",
           headers,
           body: JSON.stringify({ query, ...(pageToken ? { pageToken } : {}) }),
