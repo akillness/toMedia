@@ -43,7 +43,7 @@ describe("GET /api/credentials", () => {
 
 
   it("never returns secret values, only configured flags", async () => {
-    await post({ channel: "meta", credentials: { accountId: "act_1", accessToken: "SECRET" } });
+    await post({ channel: "google", credentials: { customerId: "1", developerToken: "d", accessToken: "SECRET" } });
     const text = JSON.stringify(await (await get()).json());
     expect(text).not.toContain("SECRET");
   });
@@ -69,16 +69,24 @@ describe("POST /api/credentials", () => {
 
   it("rejects an unknown channel or non-object credentials", async () => {
     expect((await post({ channel: "bogus", credentials: {} })).status).toBe(400);
-    expect((await post({ channel: "meta", credentials: "nope" })).status).toBe(400);
+    expect((await post({ channel: "google", credentials: "nope" })).status).toBe(400);
+  });
+
+  it("rejects credential writes for non-MVP channels (google-only scope)", async () => {
+    // meta/taboola/tiktok connectors exist in source but are unregistered for
+    // the MVP — storing their secrets would be inert and misleading.
+    for (const channel of ["meta", "taboola", "tiktok"]) {
+      expect((await post({ channel, credentials: { accessToken: "x" } })).status).toBe(400);
+    }
   });
 
   it("enforces LEVER_ADMIN_TOKEN when set", async () => {
     process.env.LEVER_ADMIN_TOKEN = "s3cret";
     resetVaultCache();
-    const denied = await post({ channel: "meta", credentials: { accountId: "a", accessToken: "b" } });
+    const denied = await post({ channel: "google", credentials: { customerId: "1", developerToken: "d", accessToken: "b" } });
     expect(denied.status).toBe(401);
     const ok = await post(
-      { channel: "meta", credentials: { accountId: "a", accessToken: "b" } },
+      { channel: "google", credentials: { customerId: "1", developerToken: "d", accessToken: "b" } },
       { "x-lever-admin": "s3cret" },
     );
     expect(ok.status).toBe(200);
@@ -89,7 +97,7 @@ describe("POST /api/credentials", () => {
     delete process.env.LEVER_ADMIN_TOKEN;
     resetVaultCache();
     try {
-      const denied = await post({ channel: "meta", credentials: { accountId: "a", accessToken: "b" } });
+      const denied = await post({ channel: "google", credentials: { customerId: "1", developerToken: "d", accessToken: "b" } });
       expect(denied.status).toBe(401);
     } finally {
       vi.unstubAllEnvs();
@@ -138,12 +146,12 @@ describe("multi-tenant accountId", () => {
   it("rejects an invalid accountId on GET, POST, and DELETE", async () => {
     expect((await get("?accountId=has:colon")).status).toBe(400);
     expect(
-      (await post({ channel: "meta", accountId: "has:colon", credentials: { a: 1 } })).status,
+      (await post({ channel: "google", accountId: "has:colon", credentials: { a: 1 } })).status,
     ).toBe(400);
     expect(
       (
         await DELETE(
-          new Request("http://localhost/api/credentials?channel=meta&accountId=has:colon", {
+          new Request("http://localhost/api/credentials?channel=google&accountId=has:colon", {
             method: "DELETE",
           }),
         )

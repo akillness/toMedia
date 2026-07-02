@@ -64,18 +64,23 @@ try {
   console.log("\n[2] What-if controls are interactive");
   const exportBtn = page.getByRole("button", { name: "Export CSV" });
   check("Export CSV button enabled with seeded data", await exportBtn.isEnabled());
-  await page.getByRole("button", { name: "Reset demo" }).click();
+  await page.getByRole("button", { name: "Reset sample" }).click();
   await page.waitForTimeout(200);
-  check("Source line shows the seeded dataset after reset", (await page.getByText(/Seeded demo dataset/).count()) >= 1);
+  check("Source line shows the sample dataset after reset", (await page.getByText(/Sample dataset/).count()) >= 1);
 
   console.log("\n[3] Credential catalog API serves the free-tier channels");
   const credResp = await page.request.get(`${BASE}/api/credentials`);
   check("GET /api/credentials returns 200", credResp.status() === 200, `status ${credResp.status()}`);
   const credJson = await credResp.json().catch(() => ({}));
-  const channelNames = JSON.stringify(credJson).toLowerCase();
   check("response carries a channels array", Array.isArray(credJson.channels), `keys: ${Object.keys(credJson).join(",")}`);
-  for (const ch of ["google", "meta", "tiktok", "taboola"]) {
-    check(`catalog advertises '${ch}'`, channelNames.includes(ch));
+  // MVP SCOPE: Google Ads is the only collection channel wired into the
+  // deployed product (see src/lib/channels/index.ts). The catalog must
+  // advertise google alone — a non-MVP channel showing up here means the
+  // registry scope regressed.
+  const catalogChannels = (credJson.channels || []).map((c) => c.channel);
+  check("catalog advertises 'google'", catalogChannels.includes("google"), `channels: ${catalogChannels.join(",")}`);
+  for (const ch of ["meta", "tiktok", "taboola"]) {
+    check(`catalog does NOT advertise non-MVP '${ch}'`, !catalogChannels.includes(ch));
   }
 
   console.log("\n[4] Real-data ingest ranks rows end to end");
@@ -83,7 +88,8 @@ try {
     source: "smoke",
     rows: [
       { entityId: "w1", entityName: "Winner", channel: "google", spend: 200, revenue: 800, clicks: 400, impressions: 8000, conversions: 40 },
-      { entityId: "l1", entityName: "Loser", channel: "meta", spend: 1000, revenue: 450, clicks: 600, impressions: 9000, conversions: 18 },
+      // MVP: google-only — caller rows stay on the one real channel too.
+      { entityId: "l1", entityName: "Loser", channel: "google", spend: 1000, revenue: 450, clicks: 600, impressions: 9000, conversions: 18 },
     ],
   };
   const ingestResp = await page.request.post(`${BASE}/api/ingest`, {

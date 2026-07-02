@@ -20,12 +20,18 @@ import type { Channel } from "@/lib/types";
  * production, so a forgotten token never silently exposes credential writes.
  */
 
+// MVP SCOPE: Google Ads is the only channel the deployed product collects
+// from (see src/lib/channels/index.ts). Credential writes for the other
+// channels are rejected too — accepting them would store secrets no
+// connector ever reads, which misleads operators into thinking a channel is
+// onboarded. Re-enabling a channel post-MVP: uncomment its line below AND
+// register its connector in src/lib/channels/index.ts.
 function isChannel(value: unknown): value is Exclude<Channel, "other"> {
   return (
-    value === "google" ||
-    value === "meta" ||
-    value === "taboola" ||
-    value === "tiktok"
+    value === "google"
+    // || value === "meta"     // not in MVP — connector unregistered
+    // || value === "taboola"  // not in MVP — connector unregistered
+    // || value === "tiktok"   // not in MVP — connector unregistered
   );
 }
 
